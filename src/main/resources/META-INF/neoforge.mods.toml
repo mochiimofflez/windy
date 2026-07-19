@@ -1,0 +1,32 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+issueTrackerURL="https://github.com/falling-colud/windy/issues"
+
+[[mods]]
+modId="windy"
+version="${version}"
+displayName="Windy"
+authors="falling_colud"
+logoFile="assets/windy/icon.png"
+description='''
+Wind you can see. Windy keeps a living wind over the world — it slowly veers, rises and falls, and now and then
+gathers itself into a gust. When it does, wisps streak past you, leaves tear loose from the canopy in the colour
+of their own biome, snow whips sideways through cold storms, and dust lifts off the dunes. All custom soft
+particles, spawned the way a campfire spawns smoke, so it never touches the frame and stays fully compatible
+with Sodium and Iris. Everything is tunable in-game from Mods → Windy → Config.
+'''
+
+[[dependencies.windy]]
+modId="neoforge"
+type="required"
+versionRange="[21.1,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.windy]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.22)"
+ordering="NONE"
+side="CLIENT"
