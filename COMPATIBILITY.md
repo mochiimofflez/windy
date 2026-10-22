@@ -154,6 +154,15 @@ Same full stack with `aeronautics.windSource = "VANILLA"`, the same `source vani
 The earlier command-driven check produced the 20 m/s / heading 270° status line quoted above, and
 `/windy calm` / `/windy gust 1.4` were exercised in the same session.
 
+## Known issues in the tested stack
+
+- **`MixinCamera` warning from Aeronautics (harmless, not caused by Windy).** The log shows
+  `Mixin apply for mod aeronauticswinds failed ... MixinCamera ... @Shadow method move ... was not located
+  in the target class net.minecraft.client.Camera`. Aeronautics 1.3.1 shadows `Camera.move(DDD)V`, but in
+  Minecraft 1.21.1 the method is `move(FFF)V`, and its jar ships no refmap to translate it. The mixin is
+  `required: false` (`defaultRequire: 0`), so the game skips it and continues. The warning is identical
+  with Windy's bridge disabled, and Windy does not touch `Camera`. It has to be fixed in Aeronautics.
+
 ## Known limitations
 
 - The bridge is client-only, matching both mods' particle systems. A server does not need either mod

@@ -67,3 +67,6 @@ and deliberately ignores `WindSample.bearing()` to avoid a 180° error. With `/a
 - Do not merge the Aeronautics jar or its classes into Windy.
 - Windy remains client-only; no server changes are needed.
 - The integration degrades to vanilla wind rather than crashing if Aeronautics changes its API.
+- Aeronautics 1.3.1 logs a `MixinCamera` "@Shadow method move was not located" warning
+  (it shadows `Camera.move(DDD)V`; 1.21.1 has `move(FFF)V`). It is Aeronautics' own bug, non-fatal, and
+  appears with or without Windy's bridge. See COMPATIBILITY.md.
