@@ -8,7 +8,7 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
 /**
  * Client-side test commands. {@code /windy status} tells you what the wind is doing right now,
- * {@code /windy gust [strength]} summons a gust on the spot, {@code /windy calm} kills it.
+ * {@code /windy gust [strength]} summons a gust on the spot, {@code /windy calm} kills it, {@code /windy reset} ends a calm or gust early.
  */
 public final class WindyCommands {
 
@@ -30,6 +30,12 @@ public final class WindyCommands {
                     WindDirector.INSTANCE.calm();
                     ctx.getSource().sendSuccess(
                             () -> Component.literal("[Windy] the air goes still."), false);
+                    return 1;
+                }))
+                .then(Commands.literal("reset").executes(ctx -> {
+                    WindDirector.INSTANCE.reset();
+                    ctx.getSource().sendSuccess(
+                            () -> Component.literal("[Windy] back to the natural wind."), false);
                     return 1;
                 })));
     }

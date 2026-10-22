@@ -98,6 +98,12 @@ public final class WindDirector {
         calmTicks = 0;
     }
 
+    /** Drop any /windy calm or manual gust and go back to the natural wind. */
+    public void reset() {
+        calmTicks = 0;
+        gustTicksLeft = 0;
+    }
+
     public void calm() {
         gustTicksLeft = 0;
         gustCooldown = Math.max(gustCooldown, 1200);
