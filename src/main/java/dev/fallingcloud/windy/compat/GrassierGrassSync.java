@@ -59,10 +59,20 @@ public final class GrassierGrassSync {
             }
             setDynamic.invoke(false);
             setDirection.invoke((float) Math.toDegrees(yawToward));
-            setSpeed.invoke(Math.round(Math.max(0.0f, strength) * 100.0f));
+            setSpeed.invoke(grassSpeed(strength));
         } catch (Throwable t) {
             disable(t);
         }
+    }
+
+    /**
+     * Windy's strength is low for ordinary wind (Aeronautics' base wind is about 0.16 to 0.3), but grass
+     * barely moves below roughly 50 on Grassier Grass's scale, where its own default wind sits at 70-110.
+     * So any real wind starts at half speed and rises to 100 at strength 1.0; exactly calm stays at 0.
+     */
+    static int grassSpeed(float strength) {
+        if (strength <= 0.01f) return 0;
+        return Math.round(100.0f * (0.5f + 0.5f * strength));
     }
 
     /** Restores whatever wind Grassier Grass had before Windy took over. */

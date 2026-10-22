@@ -118,7 +118,9 @@ its grass wind so the blades sway the way Windy's particles blow. This is `compa
 - Direction: Grassier Grass uses degrees on the XZ plane, 0 = +X and 90 = +Z. That is Windy's
   `atan2(z, x)` yaw, so the angle passes through unchanged.
 - Strength: Grassier Grass's speed is 100 = "original wind" (0..500). Windy's effective visual strength
-  (0..1.4, including `/windy gust` and `/windy calm`) is multiplied by 100.
+  (0..1.4, including `/windy gust` and `/windy calm`) maps to `100 * (0.5 + 0.5 * strength)`, so ordinary
+  wind sways the grass visibly (Aeronautics' base wind of about 0.2 gives 60), strength 1.0 gives 100,
+  and a calm (strength 0) gives 0. A straight `strength * 100` left normal wind too weak to see.
 - Windy turns Grassier Grass's dynamic wind off while it is driving, and restores its previous speed,
   direction and dynamic-wind setting when the external source stops, on leaving a world, or when Windy
   is disabled.
