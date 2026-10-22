@@ -1,6 +1,8 @@
 package dev.fallingcloud.windy.ambient;
 
+import dev.fallingcloud.windy.WindDirector;
 import dev.fallingcloud.windy.WindyConfig;
+import dev.fallingcloud.windy.compat.WindSource;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -75,7 +77,16 @@ public final class AmbianceDirector {
         // Outdoor palettes fade with weather and enclosure; indoor/volcanic ones are unaffected.
         if (palette.outdoor) {
             if (cfg.weatherAware()) {
-                budget *= (1.0 - level.getRainLevel(1.0f));
+                // Follow Aeronautics' regional weather when it is supplying the wind; otherwise use
+                // vanilla's global rain level exactly as before.
+                WindSource.Weather regional = WindDirector.INSTANCE.externalWeather();
+                if (regional != null) {
+                    if (regional.wet() || regional.frozen()) {
+                        budget = 0.0;
+                    }
+                } else {
+                    budget *= (1.0 - level.getRainLevel(1.0f));
+                }
             }
             if (cfg.respectEnclosure() && !level.canSeeSky(feet)) {
                 budget *= 0.7;

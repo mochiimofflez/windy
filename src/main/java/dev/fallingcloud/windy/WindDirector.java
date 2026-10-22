@@ -1,5 +1,7 @@
 package dev.fallingcloud.windy;
 
+import dev.fallingcloud.windy.compat.WindSource;
+import dev.fallingcloud.windy.compat.WindSources;
 import dev.fallingcloud.windy.particle.LeafParticle;
 import dev.fallingcloud.windy.particle.WindParticles;
 import net.minecraft.client.Minecraft;
@@ -27,7 +29,11 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  *   <li><b>Dust</b> lifted off sand in dry weather.</li>
  * </ul>
  *
- * Everything spawns the way a campfire spawns smoke — never touching the render frame — and honours the
+ * <p>When Aeronautics: Winds &amp; Weather is installed, the wind can instead be sampled from its
+ * client-side simulation. The vanilla walk stays the fallback, so Windy remains fully usable without
+ * Aeronautics and can be switched back with one config option.
+ *
+ * <p>Everything spawns the way a campfire spawns smoke — never touching the render frame — and honours the
  * vanilla particle setting.
  */
 public final class WindDirector {
@@ -40,14 +46,35 @@ public final class WindDirector {
     private int gustDuration;
     private float gustPeak;             // 0.6..1.2 strength of the current gust
     private int gustCooldown = 400;     // ticks until the next gust may start
+    private int calmTicks;              // > 0 while /windy calm is hiding the visuals
     private float lastEffective;        // the eff computed on the last live tick, for other systems
     private long lastGameTime = Long.MIN_VALUE;
+
+    // ---- external wind (Aeronautics) ----
+    private WindSource externalSource;
+    private WindSource.Sample externalSample;
+    private WindyConfig.WindSourceMode lastSourceMode;
+    private boolean externalSourceChecked;
+    private boolean sourceLogged;
 
     // ---- shared wind state (read by the ribbon renderer) ----
     public double windX() { return Math.cos(windYaw); }
     public double windZ() { return Math.sin(windYaw); }
     public float effectiveStrength() { return lastEffective; }
-    public float gustStrength() { return gustEnvelope(); }
+
+    public float gustStrength() {
+        if (calmTicks > 0) return 0.0f;
+        if (externalSample == null) return gustEnvelope();
+        return clamp(externalSample.gust() + gustEnvelope(), 0.0f, 1.4f);
+    }
+
+    /**
+     * Regional weather from the external source, or {@code null} when vanilla weather should be used.
+     * Read by the ambient-mote director so indoor/outdoor fading follows the same weather as the wind.
+     */
+    public WindSource.Weather externalWeather() {
+        return externalSample != null ? externalSample.weather() : null;
+    }
 
     private WindDirector() {
         this.windYaw = (float) (Math.random() * Math.PI * 2);
@@ -66,16 +93,26 @@ public final class WindDirector {
     public void calm() {
         gustTicksLeft = 0;
         gustCooldown = Math.max(gustCooldown, 1200);
+        calmTicks = 1200;
     }
 
     /** One-line weather report for the status command. */
     public String describe() {
+        int heading = Math.floorMod(Math.round(WindMath.headingDegrees(windYaw)), 360);
+        if (externalSample != null) {
+            String weather = externalSample.weather() != null ? externalSample.weather().name() : "vanilla weather";
+            String state = calmTicks > 0 ? "visually calmed" : "following Aeronautics";
+            return String.format("source aeronautics, %.1f m/s, heading %d deg toward, visual %.0f%%, %s, %s",
+                    externalSample.speedMps(), heading, lastEffective * 100.0f, weather, state);
+        }
         float gust = gustEnvelope();
-        int heading = Math.floorMod(Math.round(Math.toDegrees(windYaw)), 360);
-        String state = gustTicksLeft > 0
-                ? String.format("GUST %.0f%% (%d ticks left)", gust * 100, gustTicksLeft)
-                : String.format("calm, next gust in ~%d ticks", Math.max(0, gustCooldown));
-        return String.format("wind heading %d deg, base %.0f%%, %s", heading, baseStrength * 100, state);
+        String state = calmTicks > 0
+                ? "visually calmed"
+                : gustTicksLeft > 0
+                        ? String.format("GUST %.0f%% (%d ticks left)", gust * 100, gustTicksLeft)
+                        : String.format("calm, next gust in ~%d ticks", Math.max(0, gustCooldown));
+        return String.format("source vanilla, wind heading %d deg toward, base %.0f%%, %s",
+                heading, baseStrength * 100, state);
     }
 
     /** Envelope of the running gust, 0..gustPeak (attack 25%, hold, release 35%). */
@@ -104,22 +141,45 @@ public final class WindDirector {
         if (now == lastGameTime) return; // don't advance twice on the same world tick
         lastGameTime = now;
 
-        // ---- advance the wind ----
-        windYaw += (float) (rng.nextGaussian() * 0.004);
-        baseStrength = clamp(0.46f
-                + 0.30f * (float) Math.sin(now * 9.2e-4 + 1.7)
-                + 0.22f * (float) Math.sin(now * 2.7e-4 + 4.1), 0f, 1f);
-        if (gustTicksLeft > 0) {
-            gustTicksLeft--;
-        } else if (cfg.gustiness() > 0 && --gustCooldown <= 0) {
-            startGust(0.6f + rng.nextFloat() * 0.6f, 70 + rng.nextInt(110));
-            gustCooldown = 160 + rng.nextInt(1 + (int) (1400 * (1.05f - cfg.gustiness() / 100f)));
+        // ---- advance or sample the wind ----
+        WindSource.Sample sampled = sampleExternal(level, player, cfg);
+        if (sampled != null) {
+            externalSample = sampled;
+            windYaw = sampled.yawToward();
+            baseStrength = clamp(sampled.strength(), 0.0f, 1.0f);
+            if (gustTicksLeft > 0) gustTicksLeft--;
+        } else {
+            externalSample = null;
+            advanceVanillaWind(cfg, rng, now);
         }
+        if (calmTicks > 0) calmTicks--;
 
-        float gust = gustEnvelope();
-        float eff = clamp(baseStrength * 0.45f + gust, 0f, 1.4f);   // effective visible wind
+        float manualGust = gustEnvelope();
+        float gust;
+        float eff;
+        if (calmTicks > 0) {
+            // /windy calm is a full visual mute, not just a gust suppressor.
+            gust = 0.0f;
+            eff = 0.0f;
+        } else if (externalSample != null) {
+            gust = clamp(externalSample.gust() + manualGust, 0.0f, 1.4f);
+            eff = clamp(externalSample.strength() + manualGust, 0.0f, 1.4f);
+        } else {
+            gust = manualGust;
+            eff = clamp(baseStrength * 0.45f + gust, 0f, 1.4f);   // effective visible wind
+        }
         lastEffective = eff;
+        if (!sourceLogged) {
+            sourceLogged = true;
+            Windy.LOGGER.info("[Windy] {}", describe());
+        }
         double wx = Math.cos(windYaw), wz = Math.sin(windYaw);      // unit wind direction
+
+        // Calm, or a truly windless Aeronautics sample, should not leave motes and leaves drifting
+        // with a stale direction. Manual gusts still bypass this because they raise eff above zero.
+        if (calmTicks > 0 || (externalSample != null && eff <= 0.01f)) {
+            return;
+        }
 
         double densityMul = switch (cfg.intensity()) {
             case SUBTLE -> 0.45;
@@ -141,7 +201,17 @@ public final class WindDirector {
         // Vanilla distance-culls non-limiter particles past ~32 blocks; don't waste budget beyond that.
         int radius = Math.min(cfg.radius(), 32);
         double px = player.getX(), py = player.getY(), pz = player.getZ();
-        float rain = level.getRainLevel(1.0f);
+
+        // Regional weather is optional: when it is unavailable, fall back to vanilla rain/snow exactly
+        // as before. A wet region is treated like steady rain; a frozen one like snowfall.
+        WindSource.Weather regional = externalSample != null ? externalSample.weather() : null;
+        float rain = regional != null
+                ? (regional.wet() || regional.frozen() ? 0.75f : 0.0f)
+                : level.getRainLevel(1.0f);
+        boolean snowWeather = regional != null ? regional.frozen() : rain > 0.1f;
+        boolean dustWeather = regional != null
+                ? !regional.wet() && !regional.frozen()
+                : rain < 0.05f;
 
         // ---- wisps: wind made visible — a trickle on ordinary wind, a flurry in gusts ----
         if (cfg.wisps() && eff > 0.24f) {
@@ -209,9 +279,9 @@ public final class WindDirector {
         }
 
         // ---- blowing snow: near-horizontal streaks where it is snowing ----
-        // (isRainingAt tests ==RAIN, so it is false in snow — combine the raw weather flag with the
+        // (isRainingAt tests ==RAIN, so it is false in snow — combine the weather flag with the
         //  biome's own precipitation at that position instead.)
-        if (cfg.snow() && rain > 0.1f) {
+        if (cfg.snow() && snowWeather) {
             int count = poisson(9.0 * densityMul * rain * (0.55 + 0.8 * gust), rng);
             for (int i = 0; i < count; i++) {
                 int x = (int) Math.floor(px + (rng.nextDouble() * 2 - 1) * radius);
@@ -233,7 +303,7 @@ public final class WindDirector {
         }
 
         // ---- dust: lifted off sand in dry weather ----
-        if (cfg.dust() && rain < 0.05f) {
+        if (cfg.dust() && dustWeather) {
             int count = poisson(3.6 * densityMul * (0.40 + 0.9 * gust), rng);
             for (int i = 0; i < count; i++) {
                 int x = (int) Math.floor(px + (rng.nextDouble() * 2 - 1) * radius);
@@ -252,6 +322,47 @@ public final class WindDirector {
                         0.004 + rng.nextDouble() * 0.006,
                         wz * speed + rng.nextGaussian() * 0.02);
             }
+        }
+    }
+
+    private void advanceVanillaWind(WindyConfig cfg, RandomSource rng, long now) {
+        windYaw += (float) (rng.nextGaussian() * 0.004);
+        baseStrength = clamp(0.46f
+                + 0.30f * (float) Math.sin(now * 9.2e-4 + 1.7)
+                + 0.22f * (float) Math.sin(now * 2.7e-4 + 4.1), 0f, 1f);
+        if (gustTicksLeft > 0) {
+            gustTicksLeft--;
+        } else if (cfg.gustiness() > 0 && --gustCooldown <= 0) {
+            startGust(0.6f + rng.nextFloat() * 0.6f, 70 + rng.nextInt(110));
+            gustCooldown = 160 + rng.nextInt(1 + (int) (1400 * (1.05f - cfg.gustiness() / 100f)));
+        }
+    }
+
+    private WindSource.Sample sampleExternal(ClientLevel level, LocalPlayer player, WindyConfig cfg) {
+        WindyConfig.WindSourceMode mode = cfg.windSource();
+        if (mode != lastSourceMode) {
+            lastSourceMode = mode;
+            externalSource = null;
+            externalSourceChecked = false;
+            sourceLogged = false;
+        }
+        if (mode == WindyConfig.WindSourceMode.VANILLA) {
+            return null;
+        }
+        if (!externalSourceChecked) {
+            externalSourceChecked = true;
+            externalSource = WindSources.create(mode);
+        }
+        if (externalSource == null) {
+            return null;
+        }
+        try {
+            return externalSource.sample(level, player.getEyePosition());
+        } catch (Throwable t) {
+            Windy.LOGGER.warn("[Windy] Aeronautics wind sampling failed; falling back to built-in wind.", t);
+            externalSource = null;
+            externalSourceChecked = true;
+            return null;
         }
     }
 

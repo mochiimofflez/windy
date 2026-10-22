@@ -102,6 +102,11 @@ public final class WindRibbons {
         WindDirector wind = WindDirector.INSTANCE;
         float eff = wind.effectiveStrength();
         float gust = wind.gustStrength();
+        if (eff <= 0.01f && gust <= 0.01f) {
+            // /windy calm (or a windless external sample) should clear existing ribbons too.
+            ribbons.clear();
+            return;
+        }
         double wx = wind.windX(), wz = wind.windZ();
         RandomSource rng = level.random;
 

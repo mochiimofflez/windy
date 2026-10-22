@@ -57,5 +57,14 @@
   "windy.config.compat": "Compatibility",
   "windy.config.compat.tooltip": "How Windy behaves alongside vanilla settings.",
   "windy.config.vanilla_particles": "Respect particle setting",
-  "windy.config.vanilla_particles.tooltip": "Ease off when the vanilla particle setting is Decreased, and stop on Minimal."
+  "windy.config.vanilla_particles.tooltip": "Ease off when the vanilla particle setting is Decreased, and stop on Minimal.",
+
+  "windy.config.aeronautics": "Aeronautics",
+  "windy.config.aeronautics.tooltip": "Follow the local wind from Aeronautics: Winds & Weather.",
+  "windy.config.wind_source": "Wind source",
+  "windy.config.wind_source.tooltip": "AUTO follows Aeronautics when installed; VANILLA keeps Windy's own living wind; AERONAUTICS prefers it and warns if unavailable.",
+  "windy.config.aeronautics_full_strength": "Full-strength speed (m/s)",
+  "windy.config.aeronautics_full_strength.tooltip": "Aeronautics wind speed that maps to Windy's nominal full visual strength. Aeronautics' base wind is 6 m/s and its cap is 55 m/s.",
+  "windy.config.aeronautics_weather": "Use regional weather",
+  "windy.config.aeronautics_weather.tooltip": "Use Aeronautics' regional weather for snow, dust, rain fading and storm visuals."
 }

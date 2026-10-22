@@ -7,7 +7,7 @@ issueTrackerURL="https://github.com/falling-colud/windy/issues"
 modId="windy"
 version="${version}"
 displayName="Windy"
-authors="falling_colud"
+authors="falling_colud, Windy Aeronautics contributors"
 logoFile="assets/windy/icon.png"
 description='''
 Wind you can see. Windy keeps a living wind over the world — it slowly veers, rises and falls, and now and then
@@ -15,6 +15,8 @@ gathers itself into a gust. When it does, wisps streak past you, leaves tear loo
 of their own biome, snow whips sideways through cold storms, and dust lifts off the dunes. All custom soft
 particles, spawned the way a campfire spawns smoke, so it never touches the frame and stays fully compatible
 with Sodium and Iris. Everything is tunable in-game from Mods → Windy → Config.
+
+This build can also follow the local wind and regional weather from Aeronautics: Winds & Weather.
 '''
 
 [[dependencies.windy]]
@@ -29,4 +31,11 @@ modId="minecraft"
 type="required"
 versionRange="[1.21.1,1.22)"
 ordering="NONE"
+side="CLIENT"
+
+[[dependencies.windy]]
+modId="aeronauticswinds"
+type="optional"
+versionRange="[1.3,1.4)"
+ordering="BEFORE"
 side="CLIENT"
