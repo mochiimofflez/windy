@@ -18,8 +18,8 @@ public final class WindMath {
 
     /** Yaw (radians) for a meteorological "wind from" bearing in degrees. */
     public static float yawTowardFromBearing(double bearingDegrees) {
-        // Bearings are compass angles (0 = north, 90 = east); world yaw is atan2(Z, X), so a
-        // quarter turn converts between them. The half turn is in the bearing-to-toward sense.
+        // Two steps: +180 turns "from" into "toward", and -90 converts a compass angle (0 = north,
+        // 90 = east) into atan2(Z, X) (0 = east, north = -Z). Together: +90.
         return (float) Math.toRadians(bearingDegrees + 90.0);
     }
 
