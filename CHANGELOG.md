@@ -7,6 +7,9 @@ original project; this file starts at the point the Aeronautics compatibility la
 
 ### Added
 
+- **Grassier Grass wind sync.** While Aeronautics supplies the wind, Windy drives Grassier Grass's
+  grass wind direction and strength so the grass sways with Windy's particles. Option
+  `compatibility.grassierGrassSync`; see COMPATIBILITY.md.
 - **Aeronautics: Winds & Weather integration.** Windy can now follow the local client-side wind from
   Aeronautics instead of inventing its own. Direction, speed, gusts and regional weather all come from
   the same sample Aeronautics uses for its own particle drift.

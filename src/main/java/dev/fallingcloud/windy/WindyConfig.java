@@ -40,6 +40,7 @@ public final class WindyConfig {
     private static final ModConfigSpec.EnumValue<WindSourceMode> WIND_SOURCE;
     private static final ModConfigSpec.DoubleValue AERONAUTICS_FULL_STRENGTH_MPS;
     private static final ModConfigSpec.BooleanValue AERONAUTICS_WEATHER;
+    private static final ModConfigSpec.BooleanValue GRASSIER_GRASS_SYNC;
 
     private static final ModConfigSpec.BooleanValue AMBIENT_ENABLED;
     private static final ModConfigSpec.EnumValue<Density> AMBIENT_DENSITY;
@@ -151,6 +152,10 @@ public final class WindyConfig {
         RESPECT_PARTICLES = b.comment("Ease off when the vanilla particle setting is Decreased, and stop on Minimal.")
                 .translation("windy.config.vanilla_particles")
                 .define("respectVanillaParticleSetting", bool(old, "respectVanillaParticleSetting", true));
+        GRASSIER_GRASS_SYNC = b.comment("Drive Grassier Grass's wind direction and strength from Windy while an "
+                        + "external wind source (Aeronautics) is active. Does nothing if Grassier Grass is absent.")
+                .translation("windy.config.grassier_grass_sync")
+                .define("grassierGrassSync", true);
         b.pop();
 
         b.comment("Aeronautics: Winds & Weather integration.")
@@ -190,6 +195,7 @@ public final class WindyConfig {
     public boolean snow()                          { return SNOW.get(); }
     public boolean dust()                          { return DUST.get(); }
     public boolean respectVanillaParticleSetting() { return RESPECT_PARTICLES.get(); }
+    public boolean grassierGrassSync()             { return GRASSIER_GRASS_SYNC.get(); }
 
     // --- Aeronautics ----------------------------------------------------------
     public WindSourceMode windSource()               { return WIND_SOURCE.get(); }

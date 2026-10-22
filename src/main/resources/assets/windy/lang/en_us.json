@@ -66,5 +66,7 @@
   "windy.config.aeronautics_full_strength": "Full-strength speed (m/s)",
   "windy.config.aeronautics_full_strength.tooltip": "Aeronautics wind speed that maps to Windy's nominal full visual strength. Aeronautics' base wind is 6 m/s and its cap is 55 m/s.",
   "windy.config.aeronautics_weather": "Use regional weather",
-  "windy.config.aeronautics_weather.tooltip": "Use Aeronautics' regional weather for snow, dust, rain fading and storm visuals."
+  "windy.config.aeronautics_weather.tooltip": "Use Aeronautics' regional weather for snow, dust, rain fading and storm visuals.",
+  "windy.config.grassier_grass_sync": "Sync Grassier Grass wind",
+  "windy.config.grassier_grass_sync.tooltip": "Drive Grassier Grass's wind direction and strength from Windy while an external wind source (Aeronautics) is active. Does nothing if Grassier Grass is absent."
 }

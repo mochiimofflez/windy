@@ -106,6 +106,28 @@ snow in a desert.
 If regional weather is disabled or unavailable, Windy falls back to `level.getRainLevel(1.0f)` and the
 original vanilla snow/dust checks.
 
+## Grassier Grass
+
+When Grassier Grass (`grassiergrass`) is installed and an external wind source is active, Windy drives
+its grass wind so the blades sway the way Windy's particles blow. This is `compatibility.grassierGrassSync`
+(default on).
+
+- Grassier Grass has no formal API. Windy calls its public in-memory setters on
+  `com.leonardoinc22.shortgrass.config.GrassConfig` by reflection (no compile-time dependency, nothing
+  bundled, nothing written to its config file).
+- Direction: Grassier Grass uses degrees on the XZ plane, 0 = +X and 90 = +Z. That is Windy's
+  `atan2(z, x)` yaw, so the angle passes through unchanged.
+- Strength: Grassier Grass's speed is 100 = "original wind" (0..500). Windy's effective visual strength
+  (0..1.4, including `/windy gust` and `/windy calm`) is multiplied by 100.
+- Windy turns Grassier Grass's dynamic wind off while it is driving, and restores its previous speed,
+  direction and dynamic-wind setting when the external source stops, on leaving a world, or when Windy
+  is disabled.
+- Only active while Aeronautics supplies the wind. With Windy's own wind (`VANILLA`), Grassier Grass keeps
+  its own dynamic wind.
+- If the reflection fails (for example a Grassier Grass update renames the setters), Windy logs one
+  warning and leaves Grassier Grass alone.
+- Tested against Grassier Grass 1.4.5 for 1.21.1.
+
 ## Fallback behaviour
 
 - **Aeronautics not installed:** `AUTO` silently uses Windy's original wind. `AERONAUTICS` logs one

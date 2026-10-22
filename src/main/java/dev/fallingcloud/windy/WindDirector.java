@@ -1,5 +1,6 @@
 package dev.fallingcloud.windy;
 
+import dev.fallingcloud.windy.compat.GrassierGrassSync;
 import dev.fallingcloud.windy.compat.WindSource;
 import dev.fallingcloud.windy.compat.WindSources;
 import dev.fallingcloud.windy.particle.LeafParticle;
@@ -138,6 +139,7 @@ public final class WindDirector {
         WindyConfig cfg = WindyConfig.get();
         if (!cfg.enabled() || cfg.intensity() == WindyConfig.Intensity.OFF) {
             externalSample = null;
+            GrassierGrassSync.INSTANCE.release();
             return;
         }
 
@@ -146,6 +148,7 @@ public final class WindDirector {
         LocalPlayer player = mc.player;
         if (level == null || player == null) {
             externalSample = null; // do not leak the last world's weather into the next one
+            GrassierGrassSync.INSTANCE.release();
             return;
         }
         if (mc.isPaused()) return;
@@ -183,6 +186,7 @@ public final class WindDirector {
             eff = clamp(baseStrength * 0.45f + gust, 0f, 1.4f);   // effective visible wind
         }
         lastEffective = eff;
+        GrassierGrassSync.INSTANCE.update(cfg.grassierGrassSync() && externalSample != null, windYaw, eff);
         if (!sourceLogged) {
             sourceLogged = true;
             Windy.LOGGER.info("[Windy] {}", describe());
