@@ -55,6 +55,8 @@ public final class WindDirector {
     private WindSource.Sample externalSample;
     private WindyConfig.WindSourceMode lastSourceMode;
     private boolean externalSourceChecked;
+    private int externalFailures;
+    private static final int MAX_EXTERNAL_FAILURES = 3;
     private boolean sourceLogged;
 
     // ---- shared wind state (read by the ribbon renderer) ----
@@ -90,6 +92,11 @@ public final class WindDirector {
     }
 
     /** Kill the running gust and hold the air still for a while. */
+    /** A manual gust cancels /windy calm so it is never silently swallowed. */
+    public void endCalm() {
+        calmTicks = 0;
+    }
+
     public void calm() {
         gustTicksLeft = 0;
         gustCooldown = Math.max(gustCooldown, 1200);
@@ -129,12 +136,19 @@ public final class WindDirector {
     @SubscribeEvent
     public void onClientTick(ClientTickEvent.Post event) {
         WindyConfig cfg = WindyConfig.get();
-        if (!cfg.enabled() || cfg.intensity() == WindyConfig.Intensity.OFF) return;
+        if (!cfg.enabled() || cfg.intensity() == WindyConfig.Intensity.OFF) {
+            externalSample = null;
+            return;
+        }
 
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
         LocalPlayer player = mc.player;
-        if (level == null || player == null || mc.isPaused()) return;
+        if (level == null || player == null) {
+            externalSample = null; // do not leak the last world's weather into the next one
+            return;
+        }
+        if (mc.isPaused()) return;
 
         RandomSource rng = level.random;
         long now = level.getGameTime();
@@ -344,6 +358,7 @@ public final class WindDirector {
             lastSourceMode = mode;
             externalSource = null;
             externalSourceChecked = false;
+            externalFailures = 0;
             sourceLogged = false;
         }
         if (mode == WindyConfig.WindSourceMode.VANILLA) {
@@ -357,11 +372,16 @@ public final class WindDirector {
             return null;
         }
         try {
-            return externalSource.sample(level, player.getEyePosition());
+            WindSource.Sample sample = externalSource.sample(level, player.getEyePosition());
+            externalFailures = 0;
+            return sample;
         } catch (Throwable t) {
-            Windy.LOGGER.warn("[Windy] Aeronautics wind sampling failed; falling back to built-in wind.", t);
-            externalSource = null;
-            externalSourceChecked = true;
+            // A linkage error is permanent; anything else may be a one-off during a level change.
+            if (t instanceof LinkageError || ++externalFailures >= MAX_EXTERNAL_FAILURES) {
+                Windy.LOGGER.warn("[Windy] Aeronautics wind sampling failed; falling back to built-in wind.", t);
+                externalSource = null;
+                externalSourceChecked = true;
+            }
             return null;
         }
     }

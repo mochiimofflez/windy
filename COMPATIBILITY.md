@@ -84,7 +84,7 @@ The physical speed is still reported in `/windy status`; only the particle budge
 
 Gusts use `min(1.4, strength * 0.9)` as the sampled gust component, so strong wind produces leaf and
 dust budgets near the top of Windy's range without making every frame a storm. `/windy gust` adds a
-manual visual gust on top; `/windy calm` hides the visuals for 60 seconds but leaves Aeronautics' wind
+manual visual gust on top (and ends any active calm); `/windy calm` hides the visuals for 60 seconds but leaves Aeronautics' wind
 untouched.
 
 ## Weather mapping
@@ -111,8 +111,9 @@ original vanilla snow/dust checks.
 - **Aeronautics not installed:** `AUTO` silently uses Windy's original wind. `AERONAUTICS` logs one
   warning and also falls back.
 - **Aeronautics installed but API missing:** one warning, then vanilla wind.
-- **Aeronautics sample throws at runtime:** one warning with the stack trace, then vanilla wind for the
-  rest of the session.
+- **Aeronautics sample throws at runtime:** a linkage error, or 3 failures in a row, logs one warning
+  with the stack trace and switches to vanilla wind for the rest of the session. A single transient
+  failure (for example during a dimension change) just uses vanilla wind for that tick.
 - **Config `windSource = VANILLA`:** the external source is never created, even when Aeronautics is
   installed.
 - **Config changed while playing:** the director notices the mode change and recreates or drops the

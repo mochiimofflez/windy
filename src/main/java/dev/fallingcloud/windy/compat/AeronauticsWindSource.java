@@ -27,13 +27,14 @@ public final class AeronauticsWindSource implements WindSource {
     private double cachedWeatherX;
     private double cachedWeatherZ;
     private boolean weatherValid;
+    private ClientLevel cachedLevel;
 
     @Override
     public Sample sample(ClientLevel level, Vec3 position) {
         WindsSim.Simulation simulation = WindsSim.forLevel(level);
         simulation.sampleWindTo(level, position.x, position.y, position.z, vector);
 
-        double speedMps = vector.length();
+        double speedMps = Math.hypot(vector.x, vector.z);
         float yawToward = WindMath.yawToward(vector.x, vector.z);
         float strength = WindMath.visualStrength(speedMps,
                 WindyConfig.get().aeronauticsFullStrengthMps());
@@ -51,6 +52,7 @@ public final class AeronauticsWindSource implements WindSource {
         double dx = position.x - cachedWeatherX;
         double dz = position.z - cachedWeatherZ;
         boolean stale = !weatherValid
+                || level != cachedLevel
                 || now < cachedWeatherTick
                 || now - cachedWeatherTick >= WEATHER_CACHE_TICKS
                 || dx * dx + dz * dz > WEATHER_CACHE_DISTANCE_SQR;
@@ -60,6 +62,7 @@ public final class AeronauticsWindSource implements WindSource {
             cachedWeatherX = position.x;
             cachedWeatherZ = position.z;
             weatherValid = true;
+            cachedLevel = level;
         }
         return cachedWeather;
     }

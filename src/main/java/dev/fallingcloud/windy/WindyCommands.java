@@ -35,6 +35,7 @@ public final class WindyCommands {
     }
 
     private static int gust(CommandSourceStack source, float strength) {
+        WindDirector.INSTANCE.endCalm();
         WindDirector.INSTANCE.startGust(strength, 200);
         source.sendSuccess(
                 () -> Component.literal(String.format("[Windy] gust incoming at %.0f%%.", strength * 100)),
